@@ -1,7 +1,7 @@
 [project]
-name = "bacnet-dm-tags"
+name = "bsit-tags"
 version = "0.1.0"
-description = "Add your description here"
+description = "Explore BACnet Tags to RDF"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
