@@ -27,6 +27,9 @@ how context information can be inherited from the tags of a device object and
 the subordinate tags of a structured view object that are beyond the scope of
 this demonstration.
 
+This sample application assumes that the `vendor-identifier` property of the
+Device Object is **999**.
+
 ## Primitive Data Values
 
 This application only supports object properties and tag values that are
@@ -87,4 +90,14 @@ same form that Turtle specifies.  For more detailed information see the proposal
 | `snork^^xsd:short` | Datatype for a literal |
 | `snork(1)` | Repeating value |
 
+### Notes
 
+1. The language suffix and datatype suffix are part of the tag name rather than
+   requiring the tag value to be quoted and then include one of these two
+   parts.
+2. The language and datatype suffix cannot both be applied at the same time,
+   just like Turtle.
+3. The repeating value suffix is for legacy implementations that required every
+   tag to be unique, unlike RDF that allows mulitple values or objects for the
+   same predicate.  It is **not** an indication of an array or function call
+   and is stripped from the tag name.
