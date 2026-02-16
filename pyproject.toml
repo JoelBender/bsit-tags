@@ -1,0 +1,11 @@
+[project]
+name = "bacnet-dm-tags"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bacpypes3>=0.0.102",
+    "nicegui>=3.7.1",
+    "rdflib>=7.5.0",
+]
