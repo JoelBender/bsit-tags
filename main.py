@@ -541,7 +541,8 @@ def on_table_change(table: ObjectPropertyTable | None):
         if id_name:
             s = name_to_uri(id_name)
         else:
-            s = BNode(obj_identifier.replace(",", "-"))
+            obj_id = ObjectIdentifier(obj_identifier)
+            s = BNode(f"{int(obj_id[0])}-{obj_id[1]}")
         _logger.debug(f"{s = }")
 
         for tag_name, tag_value in statements:
