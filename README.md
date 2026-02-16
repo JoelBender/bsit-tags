@@ -10,8 +10,8 @@ of the BACnet Semantic Interoperability Toolkit (BSIT) for constructing ASHRAE
 Clone the repository and run the application using [uv](https://github.com/astral-sh/uv).
 
 ```shell
-$ git clone xxxxx
-$ cd xxxxx
+$ git clone https://github.com/JoelBender/bsit-tags.git
+$ cd bsit-tags
 $ uv run main.py
 NiceGUI ready to go on http://localhost:8080, ...
 ```
