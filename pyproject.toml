@@ -5,7 +5,7 @@ description = "Explore BACnet Tags to RDF"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "bacpypes3>=0.0.102",
+    "bacpypes3>=0.0.105",
     "nicegui>=3.7.1",
     "rdflib>=7.5.0",
 ]

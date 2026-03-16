@@ -1,3 +1,16 @@
+"""
+BACnet Semantic Interoperability Toolkit - Tags
+
+This sample NiceGUI application presents a single BACnet object with a minimal
+set of standard properties and a separate table for "tags", name-value pairs
+in the `tags` property of an object.  Below the two tables is an example of
+how that object is represented in BACnet/RDF.
+
+See ASHRAE 135-2024ct for a description of BACnet/RDF and contact me for a draft
+of the proposal to the SSPC-135 Data Modeling Working Group on how to interpret
+tags as RDF triples.
+"""
+
 import html
 import logging
 import re
@@ -30,7 +43,7 @@ from bacpypes3.basetypes import (
 from bacpypes3.vendor import ASHRAE_vendor_info
 
 from rdflib import Graph, BNode, Literal, Namespace, URIRef, RDF, RDFS, XSD
-from bacpypes3.rdf.util import BACnetNS, atomic_encode, sequence_to_graph
+from bacpypes3.rdf.util import BACNET, atomic_encode, sequence_to_graph
 
 _logger = logging.getLogger(__name__)
 
@@ -43,6 +56,7 @@ prefixes: dict[str, Namespace] = {}
 
 # optional suffix for repeating tags
 uniqueness_suffix_re = re.compile(r"[(][0-9]+[)]$")
+
 
 def name_to_uri(name: str) -> URIRef:
     """
@@ -88,6 +102,8 @@ def _cast(datatype: type) -> Callable[[str], Any]:
     return _cast_fn
 
 
+# map of labels in the datatype menu to cast functions that convert a value
+# to a specific BACnet primitive datatype (and DateTime).
 datatype_cast = {
     "None": _cast(None),
     "Null": _cast(Null),
@@ -111,6 +127,13 @@ datatype_options = list(datatype_cast.keys())
 
 
 class ObjectPropertyTable:
+    """
+    This class is a wrapper around a NiceGUI table for add/edit/delete rows
+    of a property or tag name, a value, and a datatype.  The `on_change`
+    method is called when the table contents have changed at it needs to
+    be re-interpreted.
+    """
+
     table: Any
     table_data: list[dict[str, Any]]
     next_id: int
@@ -300,6 +323,7 @@ class ObjectPropertyTable:
 
     def add_row(self):
         """Add a new row to the table with default values"""
+        _logger.debug("add_row")
         new_row = {
             "id": self.next_id,
             "name": "tag-name",
@@ -317,6 +341,7 @@ class ObjectPropertyTable:
 
     def delete_row(self, row_id):
         """Delete a row from the table"""
+        _logger.debug(f"delete_row {row_id}")
 
         # Find and remove the row with the matching ID
         for i, row in enumerate(self.table_data):
@@ -335,7 +360,7 @@ class ObjectPropertyTable:
 
     def validate_row(self, row: dict[str, Any]) -> bool:
         """Validate a row based on its datatype. Returns True iff valid."""
-        _logger.debug(f"Validating row {row['id']}: {row}")
+        _logger.debug(f"validate_row {row['id']}: {row}")
 
         datatype = row.get("datatype", "")
         value = row.get("value", "")
@@ -393,6 +418,10 @@ def on_table_change(table: ObjectPropertyTable | None):
     global base_name, prefixes
 
     try:
+        #
+        # Section 1: Build a BACnet Object given the
+        # object-type property value from the object ddta table.
+        #
         obj_type = obj_identifier = None
         for row in obj_data:
             if row["name"] == "object-type":
@@ -415,6 +444,11 @@ def on_table_change(table: ObjectPropertyTable | None):
         obj_class = ASHRAE_vendor_info.get_object_class(obj_type_enum)
         assert obj_class
 
+        #
+        # Section 2: Continue building the object from the object data table
+        # which are going to be standard primitive datatype properties.
+        #
+
         # Get attribute names and map to them from property names
         attribute_names = list(obj_class._elements.keys())
         property_to_attr = dict((attr_to_asn1(attr), attr) for attr in attribute_names)
@@ -435,7 +469,14 @@ def on_table_change(table: ObjectPropertyTable | None):
 
             setattr(sample_obj, property_to_attr[prop_name], prop_value)
 
-        # default base name
+        #
+        # Section 3: Go through the list of tag data interpreting the
+        # directives and namespace declarations and making a set of name and
+        # value pairs which will become triples.
+        #
+
+        # defaults for the vendor identifier (usually extracted from the device
+        # object), and other pieces
         vendor_id = 999
         base_name = None
         id_name = None
@@ -445,7 +486,7 @@ def on_table_change(table: ObjectPropertyTable | None):
         prefixes = default_prefixes.copy()
 
         g = Graph()
-        g.bind("bacnet", BACnetNS)
+        g.bind("bacnet", BACNET)
 
         # build tags list and a set of statements
         tags = []
@@ -533,7 +574,13 @@ def on_table_change(table: ObjectPropertyTable | None):
 
         # default base name if @base not specified
         if base_name is None:
-            base_name = f"http://example.com/vendor/{vendor_id}/"
+            base_name = f"http://data.ashrae.org/bacnet/{vendor_id}/"
+            g.bind(f"vendor{vendor_id}", base_name)
+
+        #
+        # Section 4: Translate the tag names into predicates and the values
+        # into literals or IRIs.
+        #
 
         # create the subject for the RDF graph, either from @id or a blank
         # node based on object identifier
@@ -580,15 +627,20 @@ def on_table_change(table: ObjectPropertyTable | None):
                 o = atomic_encode(g, tag_value)
             _logger.debug(f"{o = }")
 
+            # add the triple to the graph
             g.add((s, p, o))
 
+        # use the library to translate the object definition to its graph
         sequence_to_graph(sample_obj, s, g)
+
+        # serialize the result as a Turtle file and escape the HTML characters
         block_content = html.escape(g.serialize(format="turtle"))
 
     except Exception as e:
         _logger.debug(f"Error: {e}")
         block_content = f"Error: {e}"
 
+    # set the content of the code element
     set_code_content(block_content)
 
 
